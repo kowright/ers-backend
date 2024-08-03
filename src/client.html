@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Client</title>
+</head>
+<body>
+    <h1>WebSocket Client</h1>
+    <input type="text" id="nameInput" placeholder="Enter your name">
+    <input type="text" id="messageInput" placeholder="Type a message">
+    <button id="sendMessage">Send Message</button>
+    <p id="response"></p>
+
+    <script>
+        const ws = new WebSocket('ws://localhost:3003');
+
+
+        ws.onopen = () => {
+            console.log('Connected to the WebSocket server.');
+        };
+
+        ws.onmessage = (event) => {
+            console.log(`Received message from server: ${event.data}`);
+            document.getElementById('response').textContent = `${event.data}`;
+        };
+
+        document.getElementById('sendMessage').onclick = () => {
+            /*const message = document.getElementById('messageInput').value;
+            ws.send(message);*/   
+            const name = document.getElementById('nameInput').value || 'Anonymous';
+            const message = document.getElementById('messageInput').value;
+            const fullMessage = `${name}: ${message}`;
+            ws.send(fullMessage);
+        };
+
+        window.addEventListener('beforeunload', () => {
+            const name = document.getElementById('nameInput').value || 'Anonymous';
+            const disconnectMessage = `${name} has left the chat.`;
+            if (ws.readyState === WebSocket.OPEN) {
+                ws.send(disconnectMessage);
+            }
+        });
+
+        ws.onclose = () => {
+            console.log('Disconnected from the WebSocket server.');
+        };
+    </script>
+</body>
+</html>
