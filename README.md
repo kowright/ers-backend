@@ -3,6 +3,6 @@
 
 To start: 
 Open terminal in root of project
-run command `npm run`
+run command `npm run dev`
 
 Follow ers-frontend repo for frontend directions for full project
