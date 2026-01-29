@@ -10,7 +10,7 @@
     "build": "tsc --build",
     "clean": "tsc --build --clean",
     "start": "node dist/app.js",
-    "dev": "nodemon"
+    "dev": "nodemon --watch src --ext ts --exec ts-node src/app.ts"
   },
   "devDependencies": {
     "@types/express": "^4.17.21",

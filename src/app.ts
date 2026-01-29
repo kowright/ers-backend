@@ -11,6 +11,16 @@ const app = express();
 
 app.use(express.static(path.join(__dirname, 'public')));
 
+type ChatMessage = {
+    timestamp: number;
+    clientId: string;
+    message: string;
+    name: string;
+
+};
+
+const chatLog: ChatMessage[] = [];
+
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'home.html'));
 });
@@ -22,20 +32,49 @@ app.get('*', (req, res) => {
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
 
-wss.on('connection', (ws: WebSocket) => {
-    console.log('New WebSocket connection established.');
-    console.log('There are ' + wss.clients.size + " client(s)");
 
-    ws.on('message', (message: WebSocket.RawData) => {
-        const messageString = message.toString();
-        console.log(`Received message: ${messageString}`);
+/*wss.on('connection', (ws: WebSocket) => {*/
+wss.on('connection', (ws: WebSocket & { name?: string }) => {
+    console.log('New WebSocket connection established with server.');
+    const clientId = Math.random().toString(36).substring(2, 9);
+    console.log(`Client connected: ${clientId}`);
+    console.log('There are now ' + wss.clients.size + " client(s)");
 
-        wss.clients.forEach((client: WebSocket) => {
-            if (client.readyState === WebSocket.OPEN) {
-                client.send(messageString);
-            }
-        });
-        console.log(`Message Sent`);
+    /* ws.on('message', (message: WebSocket.RawData) => {*/
+    ws.on('message', (raw) => {
+        const data = JSON.parse(raw.toString());
+        /*  const messageString = message.toString();*/
+        const messageString = data.text;
+  /*      console.log(`Received message: ${messageString}`);*/
+
+        if (data.type === 'join') {
+            ws.name = data.name;
+            console.log(`${ws.name} joined the chat!`);
+            // TODO: let all clients know someone joined
+            return;
+        }
+
+        if (data.type === 'message') {
+            const chatEntry = {
+                timestamp: Date.now(),
+                name: ws.name ?? 'Anonymous',
+                message: data.text,
+                clientId: clientId,
+            };
+
+            chatLog.push(chatEntry);
+
+            console.log(`{${new Date(chatEntry.timestamp).toLocaleTimeString()}}: ${messageString}`);
+
+            wss.clients.forEach((client: WebSocket) => {
+                if (client.readyState === WebSocket.OPEN) {
+                    /* client.send(messageString);*/
+                    client.send(JSON.stringify(chatEntry));
+                }
+            });
+            console.log(`Message Sent`);
+            console.log('chat log', chatLog.map(chat => chat.message))
+        }
     });
 
     ws.on('close', (code: number, reason: Buffer) => {
@@ -49,7 +88,7 @@ wss.on('connection', (ws: WebSocket) => {
         console.log('WebSocket error:', err);
     });
 
-    ws.send('Welcome to the WebSocket server!');
+    ws.send('You are connected to the Websocket Server!');
 });
 
 wss.on('close', (code: number, reason: Buffer) => {

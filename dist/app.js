@@ -53,12 +53,21 @@ wss.on('connection', (ws) => {
                 client.send(messageString);
             }
         });
-        ws.send(`Message Sent`);
+        console.log(`Message Sent`);
+    });
+    ws.on('close', (code, reason) => {
+        console.log("Client disconnected.");
+        console.log("Code:", code);
+        console.log("Reason:", reason.toString());
+        console.log('Remaining clients: ' + wss.clients.size);
+    });
+    ws.on('error', (err) => {
+        console.log('WebSocket error:', err);
     });
     ws.send('Welcome to the WebSocket server!');
 });
 wss.on('close', (code, reason) => {
-    console.log("Client left");
+    console.log("Server closed");
     console.log(code, reason.toString());
 });
 server.listen(port, hostname, () => {
