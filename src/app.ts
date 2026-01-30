@@ -43,8 +43,9 @@ wss.on('connection', (ws: WebSocket & { name?: string }) => {
     /* ws.on('message', (message: WebSocket.RawData) => {*/
     ws.on('message', (raw) => {
         const data = JSON.parse(raw.toString());
+        console.log('Received: ', data);
         /*  const messageString = message.toString();*/
-        const messageString = data.text;
+  
   /*      console.log(`Received message: ${messageString}`);*/
 
         if (data.type === 'join') {
@@ -55,25 +56,30 @@ wss.on('connection', (ws: WebSocket & { name?: string }) => {
         }
 
         if (data.type === 'message') {
+            console.log('chat message', data.text);
             const chatEntry = {
                 timestamp: Date.now(),
-                name: ws.name ?? 'Anonymous',
+                name: data.name ?? 'Anonymous',
                 message: data.text,
                 clientId: clientId,
             };
 
             chatLog.push(chatEntry);
+            const chatString = `{${new Date(chatEntry.timestamp).toLocaleTimeString()}} [${data.name}]: ${data.text}`
 
-            console.log(`{${new Date(chatEntry.timestamp).toLocaleTimeString()}}: ${messageString}`);
+            console.log(chatString);
 
             wss.clients.forEach((client: WebSocket) => {
                 if (client.readyState === WebSocket.OPEN) {
                     /* client.send(messageString);*/
-                    client.send(JSON.stringify(chatEntry));
+                    client.send(JSON.stringify({
+                        type: 'chat',
+                        payload: chatEntry
+                    }));
                 }
             });
             console.log(`Message Sent`);
-            console.log('chat log', chatLog.map(chat => chat.message))
+            console.log('chat log', chatLog.map(chat => `{[${chat.name}]: ${chat.message}`))
         }
     });
 
@@ -88,7 +94,10 @@ wss.on('connection', (ws: WebSocket & { name?: string }) => {
         console.log('WebSocket error:', err);
     });
 
-    ws.send('You are connected to the Websocket Server!');
+    ws.send(JSON.stringify({
+        type: 'server',
+        message: 'You are connected to the WebSocket Server!'
+    }));
 });
 
 wss.on('close', (code: number, reason: Buffer) => {
