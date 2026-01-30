@@ -16,10 +16,18 @@ type ChatMessage = {
     clientId: string;
     message: string;
     name: string;
-
+    color: string;
 };
+// TODO: combine User and ChatMessage
+
+type User = {
+    name: string;
+    clientId: string;
+    color: string;
+}
 
 const chatLog: ChatMessage[] = [];
+const users: User[] = [];
 
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'home.html'));
@@ -39,30 +47,51 @@ wss.on('connection', (ws: WebSocket & { name?: string }) => {
     const clientId = Math.random().toString(36).substring(2, 9);
     console.log(`Client connected: ${clientId}`);
     console.log('There are now ' + wss.clients.size + " client(s)");
+    const newUser: User = {
+        name: '', 
+        clientId, 
+        color: '',
+    }
+    users.push(newUser);
+    console.log('Current users', users.map(u => u.clientId));
 
     /* ws.on('message', (message: WebSocket.RawData) => {*/
     ws.on('message', (raw) => {
         const data = JSON.parse(raw.toString());
         console.log('Received: ', data);
         /*  const messageString = message.toString();*/
-  
-  /*      console.log(`Received message: ${messageString}`);*/
 
+        /*      console.log(`Received message: ${messageString}`);*/
+        console.log('users', users);
+        console.log('data', data);
+        const foundUser = users.find(user => user.clientId === data.clientId);
         if (data.type === 'join') {
             ws.name = data.name;
             console.log(`${ws.name} joined the chat!`);
+            
+            if (foundUser) {
+                foundUser.color = data.color;
+                foundUser.name = data.name;
+                console.log('foundUser', foundUser);
+            }
+            else {
+                console.log('Cannot find foundUser');
+            }
             // TODO: let all clients know someone joined
             return;
         }
 
         if (data.type === 'message') {
             console.log('chat message', data.text);
+            console.log('message to with foundUser', foundUser);
             const chatEntry = {
                 timestamp: Date.now(),
                 name: data.name ?? 'Anonymous',
                 message: data.text,
                 clientId: clientId,
+                color: foundUser ? foundUser.color : '#ff0000',
             };
+            console.log('message chatEntry', chatEntry);
 
             chatLog.push(chatEntry);
             const chatString = `{${new Date(chatEntry.timestamp).toLocaleTimeString()}} [${data.name}]: ${data.text}`
@@ -96,7 +125,8 @@ wss.on('connection', (ws: WebSocket & { name?: string }) => {
 
     ws.send(JSON.stringify({
         type: 'server',
-        message: 'You are connected to the WebSocket Server!'
+        message: 'You are connected to the WebSocket Server!',
+        id: clientId
     }));
 });
 
