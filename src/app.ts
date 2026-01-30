@@ -26,8 +26,8 @@ type User = {
     color: string;
 }
 
-const chatLog: ChatMessage[] = [];
-const users: User[] = [];
+let chatLog: ChatMessage[] = [];
+let users: User[] = [];
 
 app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'home.html'));
@@ -48,8 +48,8 @@ wss.on('connection', (ws: WebSocket & { name?: string }) => {
     console.log(`Client connected: ${clientId}`);
     console.log('There are now ' + wss.clients.size + " client(s)");
     const newUser: User = {
-        name: '', 
-        clientId, 
+        name: '',
+        clientId,
         color: '',
     }
     users.push(newUser);
@@ -77,7 +77,19 @@ wss.on('connection', (ws: WebSocket & { name?: string }) => {
             else {
                 console.log('Cannot find foundUser');
             }
-            // TODO: let all clients know someone joined
+
+            const chatEntry = {
+                timestamp: Date.now(),
+                name: 'Server',
+                message: `${data.name} joined the chat! Say hi!`,
+                clientId: clientId,
+                color: '#FFFFFF',
+            };
+            wss.clients.forEach((client: WebSocket) =>
+                client.send(JSON.stringify({
+                    type: 'chat',
+                    payload: chatEntry
+                })));
             return;
         }
 
@@ -116,7 +128,26 @@ wss.on('connection', (ws: WebSocket & { name?: string }) => {
         console.log("Client disconnected.");
         console.log("Code:", code);
         console.log("Reason:", reason.toString());
-        console.log('Remaining clients: ' + wss.clients.size);
+
+        const chatEntry = {
+            timestamp: Date.now(),
+            name: 'Server',
+            message: `${ws.name} left the chat! Bye-bye now!`,
+            clientId: clientId,
+            color: '#FFFFFF',
+        };
+        wss.clients.forEach((client: WebSocket) =>
+            client.send(JSON.stringify({
+                type: 'chat',
+                payload: chatEntry
+            })));
+    
+        const before = users.length;
+        users = users.filter(user => user.clientId !== clientId);
+        const after = users.length;
+
+        console.log(`Removed user ${ws.name}. Users: ${before} ? ${after}`);
+
     });
 
     ws.on('error', (err) => {
